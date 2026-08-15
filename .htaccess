@@ -1,0 +1,54 @@
+# =====================================================================
+#  KÖK DİZİN KURALLARI
+#  cilginyazilim.com – Çoklu Seçim ve Toplu İşlem Tablosu
+# ---------------------------------------------------------------------
+#  Bu dosya alt klasörlere de MİRAS KALIR (ölçüldü) — buradaki güvenlik
+#  başlıkları assets/ ve system/ yanıtlarında da geçerlidir.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+#  1) KLASÖR İÇERİĞİ LİSTELENMESİN
+# ---------------------------------------------------------------------
+#  index dosyası olmayan bir klasöre girildiğinde Apache varsayılan
+#  olarak dosya listesini basar. Saldırganın "burada ne var?" sorusunu
+#  bedavaya cevaplamanın gereği yok.
+Options -Indexes
+
+# ---------------------------------------------------------------------
+#  2) ÇALIŞTIRILMAYAN DOSYALAR İNDİRİLEMESİN
+# ---------------------------------------------------------------------
+#  ÖLÇÜLEN SORUN: /cy_bulk.sql adresi HTTP 200 ile veritabanı kurulum
+#  dosyasının tamamını indiriyordu — tablo yapısı ve 60 kaydın tüm
+#  e-posta adresleri dahil. Bu depoda veri zaten örnek/uydurmadır ama
+#  desen tehlikelidir: aynı düzenle canlıya alınan bir projede o dosya
+#  gerçek müşteri verisi taşır. Şema ve örnek veri KURULUM malzemesidir;
+#  web sunucusunun onları servis etmesi için hiçbir sebep yoktur.
+<FilesMatch "\.(sql|md|json|lock|log|ini|bak|dist|example)$">
+    Require all denied
+</FilesMatch>
+
+# Nokta ile başlayan dosyalar (.htaccess, .gitignore, .env …).
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# ---------------------------------------------------------------------
+#  3) GÜVENLİK BAŞLIKLARI
+# ---------------------------------------------------------------------
+<IfModule mod_headers.c>
+    # Tarayıcı Content-Type'ı tahmin etmeye çalışmasın. ajax.php zaten
+    # kendi yanıtlarına bu başlığı ekliyordu (bkz. json_response) ama
+    # index.php ve assets/ altındaki dosyalarda hiç yoktu.
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Sayfa başka bir sitenin çerçevesine gömülmesin. Bu projede önemi
+    # somuttur: görünmez bir çerçeveye alınmış tablo üzerinde kullanıcıya
+    # farkında olmadan "Seçilenleri Sil" tıklatılabilir (clickjacking).
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Dış sitelere giderken tam URL yerine yalnızca alan adı gönderilsin.
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Bu sayfanın ihtiyacı olmayan tarayıcı yetenekleri kapatılsın.
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>

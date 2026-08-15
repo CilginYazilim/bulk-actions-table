@@ -1,0 +1,203 @@
+/* ==================================================================
+ *  SAYFAYA ÖZEL STİLLER
+ *  cilginyazilim.com – Çoklu Seçim ve Toplu İşlem Tablosu
+ * ------------------------------------------------------------------
+ *  Yükleme sırası:
+ *    bootstrap.min.css → dataTables.bootstrap5.min.css →
+ *    cilginyazilim.css → style.css
+ * ================================================================== */
+
+.container { max-width: 1180px; }
+
+/* GİZLİ YERLEŞİM HATASI DÜZELTMESİ: "Yeni Abone" modalında
+ * .modal-content bir <form> içine sarılıdır. ".modal-dialog-centered"
+ * modal-dialog'u flex konteyner yapar; aradaki <form>'un flex-grow'u
+ * olmadığı için içeriğine göre büzülür ve modal olması gerekenden
+ * dar görünür (bkz. todo-drag-drop / excel-import-export'taki aynı
+ * not — bu proje ailesinde tekrarlanan bir Bootstrap tuzağıdır). */
+.cy-modal .modal-dialog > form {
+    width: 100%;
+}
+
+
+/* ==================================================================
+ *  ARAÇ ÇUBUĞU: arama + durum filtresi
+ * ================================================================== */
+.cy-toolbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    padding-bottom: .15rem;
+}
+
+.cy-toolbar__search {
+    flex: 1 1 220px;
+    min-width: 160px;
+    max-width: 360px;
+}
+
+.cy-toolbar__status {
+    flex: 0 0 160px;
+}
+
+
+/* ==================================================================
+ *  TOPLU İŞLEM ÇUBUĞU
+ * ------------------------------------------------------------------
+ *  Marka mavisiyle vurgulanmış bir şerit: kullanıcı bir şey
+ *  seçtiğinde ekranın geri kalanından AYRIŞMASI, "artık toplu işlem
+ *  modundasın" mesajını renkle de destekler.
+ * ================================================================== */
+.cy-bulk-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .75rem 1rem;
+    padding: .65rem .9rem;
+    margin-bottom: .85rem;
+    background: var(--cy-brand-100);
+    border: 1px solid var(--cy-brand-400);
+    border-radius: var(--cy-radius);
+}
+
+.cy-bulk-bar__count {
+    font-size: .88rem;
+    color: var(--cy-brand-700);
+    white-space: nowrap;
+}
+
+.cy-bulk-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+#select_all_matching {
+    font-size: .82rem;
+    text-decoration: underline;
+    white-space: nowrap;
+}
+
+.cy-btn--sm {
+    padding: .38rem .8rem;
+    font-size: .82rem;
+    white-space: nowrap;
+}
+
+.cy-btn--outline {
+    background: transparent;
+    border: 1px solid var(--cy-border);
+    color: var(--cy-text-muted);
+}
+
+.cy-btn--outline:hover,
+.cy-btn--outline:focus-visible {
+    background: var(--cy-brand-100);
+    border-color: var(--cy-brand-400);
+    color: var(--cy-brand-600);
+}
+
+
+/* ==================================================================
+ *  TABLO KÜÇÜK AYARLAR
+ * ================================================================== */
+#subscriber_table th:first-child,
+#subscriber_table td:first-child {
+    width: 36px;
+    text-align: center;
+}
+
+.cy-row-check,
+#select_all_page {
+    cursor: pointer;
+}
+
+.cy-row-check:disabled,
+#select_all_page:disabled {
+    /* "Filtreye uyan tümü" modunda kutular kilitlenir (tek tek
+     * kaldırmak anlamsızdır); ama görsel olarak SOLUK değil dolgun
+     * görünsün ki "hâlâ seçili" mesajı net kalsın. */
+    opacity: 1;
+}
+
+
+/* ==================================================================
+ *  ALT ÇUBUK (uzunluk + bilgi + sayfalama) — excel-import-export
+ *  projesindeki aynı desenin tekrarı; oradaki ".dataTables_length"
+ *  satır bölünme hatasından ders alınarak burada baştan doğru
+ *  kuruldu (bkz. o projedeki ayrıntılı yorum).
+ * ================================================================== */
+.cy-bottom-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem .5rem;
+    margin-top: 1rem;
+    padding-top: .85rem;
+    border-top: 1px solid var(--cy-border);
+    font-size: .85rem;
+    color: var(--cy-text-muted);
+}
+
+.cy-bottom-bar__length,
+.cy-bottom-bar__info,
+.cy-bottom-bar__pagination {
+    display: flex;
+    align-items: center;
+}
+
+.cy-bottom-bar__length .dataTables_length label {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.cy-bottom-bar__length .dataTables_length select {
+    width: auto;
+}
+
+.cy-bottom-bar__info .dataTables_info {
+    padding: 0;
+    white-space: nowrap;
+}
+
+.cy-bottom-bar__pagination .dataTables_paginate {
+    margin: 0 !important;
+}
+
+@media (max-width: 575.98px) {
+    .cy-bottom-bar { justify-content: center; text-align: center; }
+}
+
+
+/* ==================================================================
+ *  KÜÇÜK PARÇALAR
+ * ================================================================== */
+.delete-icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background: var(--cy-brand-100);
+    color: var(--cy-brand-600);
+    font-size: 1.8rem;
+}
+
+/* Silme onayı: kırmızı. Durum değiştirme onayı varsayılan (marka
+ * mavisi) kalır — aynı modal kullanıldığı için renk, işlemin
+ * GERİ ALINABİLİR mi (mavi) yoksa KALICI mı (kırmızı) olduğunu
+ * kullanıcıya anında hissettirir. */
+.delete-icon--danger {
+    background: rgba(220, 38, 38, .12);
+    color: var(--cy-danger);
+}

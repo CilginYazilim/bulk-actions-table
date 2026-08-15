@@ -1,0 +1,35 @@
+# =====================================================================
+#  .gitignore – Git'in TAKİP ETMEYECEĞİ dosyalar
+# ---------------------------------------------------------------------
+#  NOT: Bu bir ÖRNEK PROJEDİR. Ekran görüntüleri, jQuery/Bootstrap/
+#  DataTables dosyaları ve 60 kayıtlık örnek veri bilerek repoya
+#  DAHİL EDİLMİŞTİR; projeyi indiren herkes hiçbir ek işlem yapmadan
+#  çalışan bir demo görsün diye.
+#
+#  Bu projede dosya yükleme YOKTUR — dolayısıyla repoya sızabilecek
+#  bir kullanıcı içeriği klasörü de yoktur. Yükleme ekleyecekseniz
+#  o klasörü buraya eklemeyi ve içine "kod çalıştırmayı kapatan" bir
+#  .htaccess koymayı unutmayın.
+# =====================================================================
+
+# --- Yerel ortam ayarları (şifre içerebilir, ASLA paylaşmayın) -------
+.env
+system/config.local.php
+
+# --- Editör ve işletim sistemi artıkları ----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Log ve geçici dosyalar -----------------------------------------
+*.log
+*.tmp
+*.bak
+
+# --- Bağımlılık klasörleri (bu projede kullanılmıyor) ---------------
+/vendor/
+/node_modules/
