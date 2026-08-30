@@ -54,6 +54,17 @@ var CyBulkTable = (function ($) {
 
     var searchTimer = null;
 
+    /* Shift ile ARALIK SEÇİMİ için son tıklanan satırın id'si.
+     * Yalnızca AYNI sayfa içinde anlamlıdır; sayfa değişince
+     * (restoreCheckboxState) sıfırlanır, çünkü aralık "ekranda
+     * gördüğün iki satır arası" demektir. */
+    var lastCheckedId = null;
+
+    /* Mobilde <thead> gizlendiği için sütun başlıkları her hücrenin
+     * SOLUNDA data-label olarak yeniden yazdırılır (bkz. style.css
+     * "MOBİL KART GÖRÜNÜMÜ"). Sıra, index.php'deki <th> sırasıdır. */
+    var COLUMN_LABELS = ['', '#', 'Ad Soyad', 'E-posta', 'Segment', 'Durum', 'Kayıt Tarihi', 'İşlemler'];
+
 
     /* =================================================================
      *  YARDIMCILAR
@@ -110,10 +121,50 @@ var CyBulkTable = (function ($) {
      *  SEÇİM DURUMU YÖNETİMİ
      * ============================================================== */
 
+    /* ÖLÇÜLEN SORUN: "Seçimi Temizle" iç durumu boşaltıyor ve çubuğu
+     * gizliyordu ama EKRANDAKİ kutucuklar işaretli kalıyordu — seçim
+     * temizlendikten sonra tablo hâlâ "10 satır seçili" gibi
+     * görünüyordu. Kutucukları da eşitlemek bu tutarsızlığı kapatır. */
     function resetSelection() {
         selectedIds.clear();
         selectAllMatching = false;
+        lastCheckedId     = null;
+
+        syncPageCheckboxes();
         updateBulkBar();
+    }
+
+    /**
+     * Ekrandaki kutucukların GÖRÜNÜMÜNÜ iç duruma (selectedIds /
+     * selectAllMatching) göre eşitler. Sayfa listesini (lastPageIds)
+     * YENİDEN KURMAZ ve aralık seçiminin çıpasını (lastCheckedId)
+     * bozmaz — bu yüzden ardışık Shift tıklamalarında güvenle
+     * çağrılabilir.
+     */
+    function syncPageCheckboxes() {
+        $('.cy-row-check').each(function () {
+            var id       = $(this).data('id');
+            var isPicked = selectAllMatching || selectedIds.has(id);
+
+            $(this)
+                .prop('checked', isPicked)
+                .prop('disabled', selectAllMatching);
+
+            /* Satırın kendisini de işaretle: masaüstünde ince bir zemin
+             * rengi, MOBİLDE ise kartın sol kenarındaki renkli şerit
+             * "bu kart seçili" bilgisini kutucuğa bakmadan verir. */
+            $(this).closest('tr').toggleClass('cy-row-selected', isPicked);
+        });
+
+        var allPageChecked = lastPageIds.length > 0 && lastPageIds.every(function (id) {
+            return selectAllMatching || selectedIds.has(id);
+        });
+
+        /* Masaüstündeki başlık kutucuğu ve mobildeki karşılığı aynı
+         * sınıfı taşır; ikisi de tek seferde güncellenir. */
+        $('.js-select-all-page')
+            .prop('checked', allPageChecked)
+            .prop('disabled', selectAllMatching);
     }
 
     /** Bir sayfa DataTables'tan gelince checkbox'ların işaretli
@@ -124,21 +175,13 @@ var CyBulkTable = (function ($) {
         lastPageIds = [];
 
         $('.cy-row-check').each(function () {
-            var id = $(this).data('id');
-            lastPageIds.push(id);
-
-            $(this)
-                .prop('checked', selectAllMatching || selectedIds.has(id))
-                .prop('disabled', selectAllMatching);
+            lastPageIds.push($(this).data('id'));
         });
 
-        var allPageChecked = lastPageIds.length > 0 && lastPageIds.every(function (id) {
-            return selectAllMatching || selectedIds.has(id);
-        });
+        syncPageCheckboxes();
 
-        $('#select_all_page')
-            .prop('checked', allPageChecked)
-            .prop('disabled', selectAllMatching);
+        /* Aralık seçimi yalnızca ekrandaki sayfa içinde geçerlidir. */
+        lastCheckedId = null;
 
         updateBulkBar();
     }
@@ -152,6 +195,11 @@ var CyBulkTable = (function ($) {
 
         $('#bulk_bar').toggleClass('d-none', count === 0);
         $('#bulk_count').text(count);
+
+        /* Mobilde toplu işlem çubuğu ekranın ALTINA sabitlenir; sayfanın
+         * son satırı çubuğun altında kalmasın diye <body>'ye alt boşluk
+         * eklenir (bkz. style.css body.cy-bulk-active). */
+        $('body').toggleClass('cy-bulk-active', count > 0);
 
         $('.cy-bulk-bar__count').toggleClass('d-none', count === 0);
 
@@ -203,11 +251,26 @@ var CyBulkTable = (function ($) {
                 }
             },
 
+            /* Her sütuna kendi sınıfı verilir. Masaüstünde bu sınıfların
+             * çoğu görsel olarak bir şey yapmaz; MOBİLDE ise satırı bir
+             * karta dönüştüren yerleşimin tutamaklarıdır (ad başlığa,
+             * durum rozeti sağ üste, işlemler alta taşınır). */
             columnDefs: [
-                { targets: 0, orderable: false, searchable: false, className: 'text-center', width: '36px' },
-                { targets: 1, className: 'cy-id' },
-                { targets: 7, orderable: false, searchable: false, className: 'text-center' }
+                { targets: 0, orderable: false, searchable: false, className: 'text-center cy-cell-check', width: '36px' },
+                { targets: 1, className: 'cy-id cy-cell-id' },
+                { targets: 2, className: 'cy-cell-name' },
+                { targets: 3, className: 'cy-cell-email' },
+                { targets: 4, className: 'cy-cell-segment' },
+                { targets: 5, className: 'cy-cell-status' },
+                { targets: 6, className: 'cy-cell-date' },
+                { targets: 7, orderable: false, searchable: false, className: 'text-center cy-cell-actions' }
             ],
+
+            rowCallback: function (row) {
+                $(row).children('td').each(function (index) {
+                    this.setAttribute('data-label', COLUMN_LABELS[index] || '');
+                });
+            },
 
             drawCallback: function (settings) {
                 var json = settings.json;
@@ -273,6 +336,52 @@ var CyBulkTable = (function ($) {
 
 
     /* =================================================================
+     *  TEMA (AÇIK / KOYU)
+     * -----------------------------------------------------------------
+     *  Tasarım sistemi (cilginyazilim.css) iki yoldan koyu temaya
+     *  geçer: `prefers-color-scheme` medya sorgusu (İŞLETİM SİSTEMİ
+     *  ayarı) ve <html data-cy-theme="dark"> özniteliği (KULLANICI
+     *  tercihi). Buradaki düğme yalnızca ikincisini yazar; hiç
+     *  dokunulmadığında karar işletim sistemine aittir.
+     *
+     *  İlk uygulama BURADA DEĞİL, index.php'nin <head> bölümündeki
+     *  satır içi betikte yapılır — aksi hâlde sayfa bir kare boyunca
+     *  yanlış temada çizilirdi.
+     * ============================================================== */
+
+    function effectiveTheme() {
+        var attr = document.documentElement.getAttribute('data-cy-theme');
+
+        if (attr === 'dark' || attr === 'light') {
+            return attr;
+        }
+
+        return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+            ? 'dark'
+            : 'light';
+    }
+
+    function paintThemeToggle(theme) {
+        $('#theme_toggle_icon').text(theme === 'dark' ? '☀' : '🌙');
+        $('#theme_toggle').attr({
+            'title':         theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç',
+            'aria-label':    theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç',
+            'aria-pressed':  theme === 'dark' ? 'true' : 'false'
+        });
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-cy-theme', theme);
+
+        try {
+            localStorage.setItem('cy-theme', theme);
+        } catch (e) { /* Gizli sekmede yazma engellenebilir; tema yine de uygulanır. */ }
+
+        paintThemeToggle(theme);
+    }
+
+
+    /* =================================================================
      *  OLAY BAĞLAMA
      * ============================================================== */
     function bindEvents() {
@@ -296,20 +405,65 @@ var CyBulkTable = (function ($) {
             dataTable.ajax.reload();
         });
 
-        /* --- Satır seçimi --- */
-        $('#subscriber_table').on('change', '.cy-row-check', function () {
-            var id = $(this).data('id');
+        /* --- Satır seçimi ---
+         * NEDEN 'change' DEĞİL 'click'? Shift ile aralık seçimi için
+         * olayın shiftKey bilgisine ihtiyacımız var; 'change' olayı bu
+         * bilgiyi taşımaz. 'click' anında checkbox'ın .checked değeri
+         * ZATEN yeni değerdir, dolayısıyla mantık aynen çalışır. */
+        $('#subscriber_table').on('click', '.cy-row-check', function (event) {
+            var id      = $(this).data('id');
+            var checked = this.checked;
 
-            if (this.checked) {
+            /* SHIFT + TIK = ARALIK SEÇİMİ.
+             * 40 satırlık bir sayfada 30 satırı tek tek işaretlemek
+             * kullanıcıyı yorar ve yanlış tıklamaya davet eder. Shift
+             * ile "buradan buraya" demek, tablo arayüzlerinin yerleşik
+             * beklentisidir (dosya yöneticileri, e-posta istemcileri).
+             * Aralık, EKRANDAKİ sıraya göre hesaplanır: lastPageIds
+             * dizisi satırların görünen sırasını tutar. */
+            if (event.shiftKey && lastCheckedId !== null && lastCheckedId !== id) {
+                var from = lastPageIds.indexOf(lastCheckedId);
+                var to   = lastPageIds.indexOf(id);
+
+                if (from !== -1 && to !== -1) {
+                    var start = Math.min(from, to);
+                    var end   = Math.max(from, to);
+
+                    for (var i = start; i <= end; i++) {
+                        if (checked) {
+                            selectedIds.add(lastPageIds[i]);
+                        } else {
+                            selectedIds.delete(lastPageIds[i]);
+                        }
+                    }
+
+                    lastCheckedId = id;
+
+                    /* Aralıktaki kutucukların görünümünü tazele. Burada
+                     * restoreCheckboxState() ÇAĞRILMAZ: o fonksiyon
+                     * lastCheckedId'yi sıfırlar ve ardışık shift
+                     * tıklamalarını bozardı. */
+                    syncPageCheckboxes();
+                    updateBulkBar();
+                    return;
+                }
+            }
+
+            if (checked) {
                 selectedIds.add(id);
             } else {
                 selectedIds.delete(id);
             }
 
+            lastCheckedId = id;
+
+            syncPageCheckboxes();
             updateBulkBar();
         });
 
-        $('#select_all_page').on('change', function () {
+        /* Masaüstünde başlıktaki, mobilde tablonun üstündeki kutucuk —
+         * ikisi de .js-select-all-page sınıfını taşır. */
+        $('.js-select-all-page').on('change', function () {
             var checked = this.checked;
 
             lastPageIds.forEach(function (id) {
@@ -319,12 +473,59 @@ var CyBulkTable = (function ($) {
             restoreCheckboxState();
         });
 
+        /* --- Mobil sıralama açılır listesi ---
+         * "2|asc" biçimindeki değer, DataTables'ın order() çağrısına
+         * çevrilir. Masaüstündeki başlık tıklaması ile AYNI yoldan
+         * geçer; iki farklı sıralama mantığı yoktur. */
+        $('#mobile_sort').on('change', function () {
+            var parts = String($(this).val()).split('|');
+            dataTable.order([parseInt(parts[0], 10), parts[1]]).draw(false);
+        });
+
+        /* Masaüstünde başlığa tıklanınca mobil listenin de aynı şeyi
+         * göstermesi için sıralama değişimini geri yansıt. */
+        dataTable.on('order.dt', function () {
+            var order = dataTable.order();
+
+            if (order && order.length) {
+                var value  = order[0][0] + '|' + order[0][1];
+                var $sort  = $('#mobile_sort');
+
+                /* Listede karşılığı olmayan bir sıralama (örn. tarih
+                 * sütunu artan) seçilmişse listeyi zorlamayız. */
+                if ($sort.find('option[value="' + value + '"]').length) {
+                    $sort.val(value);
+                }
+            }
+        });
+
         $('#select_all_matching').on('click', function () {
             selectAllMatching = true;
             restoreCheckboxState();
         });
 
         $('#clear_selection').on('click', resetSelection);
+
+        /* --- Tema düğmesi --- */
+        paintThemeToggle(effectiveTheme());
+
+        $('#theme_toggle').on('click', function () {
+            applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark');
+        });
+
+        /* --- Esc: seçimi bırak ---
+         * Toplu işlem modundan çıkmanın en hızlı yolu. Bir modal
+         * açıkken Esc'i Bootstrap'e bırakırız; iki davranışın
+         * çakışması "pencereyi kapatmak istedim, seçimim de gitti"
+         * şaşkınlığına yol açar. */
+        $(document).on('keydown', function (event) {
+            if (event.key !== 'Escape') { return; }
+            if ($('.modal.show').length) { return; }
+
+            if (selectedIds.size > 0 || selectAllMatching) {
+                resetSelection();
+            }
+        });
 
         /* --- Toplu durum değiştirme --- */
         $('.js-bulk-status').on('click', function (event) {

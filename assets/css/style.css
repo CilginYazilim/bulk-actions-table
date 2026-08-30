@@ -25,12 +25,10 @@
  * ================================================================== */
 .cy-toolbar {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: .75rem;
     margin-bottom: 1rem;
-    overflow-x: auto;
-    padding-bottom: .15rem;
 }
 
 .cy-toolbar__search {
@@ -43,6 +41,90 @@
     flex: 0 0 160px;
 }
 
+/* Mobil sıralama listesi masaüstünde hiç yer kaplamaz (d-md-none). */
+.cy-toolbar__sort {
+    flex: 1 1 100%;
+}
+
+/* ÖLÇÜLEN SORUN: araç çubuğu eskiden `flex-wrap: nowrap` +
+ * `overflow-x: auto` idi. Dar ekranda arama kutusu ile durum listesi
+ * yan yana sıkışıyor, ikisi de kullanılamayacak kadar daralıyor ve
+ * kullanıcıdan YATAY KAYDIRMA bekleniyordu — dokunmatik bir ekranda
+ * fark edilmesi en zor etkileşim budur. Artık alt alta dizilir ve
+ * her biri tam genişlik alır. */
+@media (max-width: 575.98px) {
+    .cy-toolbar { flex-direction: column; align-items: stretch; }
+
+    .cy-toolbar__search,
+    .cy-toolbar__status,
+    .cy-toolbar__sort {
+        flex: 1 1 auto;
+        max-width: none;
+        width: 100%;
+    }
+}
+
+
+/* ==================================================================
+ *  TEMA DÜĞMESİ
+ * ------------------------------------------------------------------
+ *  Kart başlığı marka gradyanının üzerindedir; düğme bu yüzden
+ *  "cam" görünümlüdür (yarı saydam beyaz), rengi zeminden alır.
+ * ================================================================== */
+.cy-theme-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: var(--cy-radius-sm);
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--cy-transition), transform var(--cy-transition);
+}
+
+.cy-theme-toggle:hover,
+.cy-theme-toggle:focus-visible {
+    background: rgba(255, 255, 255, .28);
+    transform: translateY(-1px);
+}
+
+
+/* ==================================================================
+ *  MOBİL "SAYFADAKİ TÜMÜNÜ SEÇ"
+ * ------------------------------------------------------------------
+ *  Mobilde <thead> gizlendiği için başlıktaki kutucuk da kaybolur.
+ *  Bu satır onun görünür karşılığıdır; etiketin TAMAMI tıklanabilir
+ *  olsun diye <label> kullanılır — dokunmatikte 18px'lik bir kutuyu
+ *  hedeflemek zordur, 44px yüksekliğinde bir şerit değildir.
+ * ================================================================== */
+.cy-select-all-mobile {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    min-height: 44px;
+    padding: .5rem .85rem;
+    margin-bottom: .75rem;
+    border: 1px solid var(--cy-border);
+    border-radius: var(--cy-radius-sm);
+    background: var(--cy-surface-soft);
+    color: var(--cy-text-muted);
+    font-size: .88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cy-select-all-mobile .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
 
 /* ==================================================================
  *  TOPLU İŞLEM ÇUBUĞU
@@ -52,10 +134,6 @@
  *  modundasın" mesajını renkle de destekler.
  * ================================================================== */
 .cy-bulk-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: .75rem 1rem;
     padding: .65rem .9rem;
     margin-bottom: .85rem;
     background: var(--cy-brand-100);
@@ -63,10 +141,35 @@
     border-radius: var(--cy-radius);
 }
 
+.cy-bulk-bar__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem 1rem;
+}
+
+.cy-bulk-bar__info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .25rem .75rem;
+    min-width: 0;
+}
+
+/* ÖLÇÜLEN SORUN: sayaç metni sabit `--cy-brand-700` (koyu lacivert)
+ * idi. Koyu temada çubuğun zemini de koyulaştığı için (--cy-brand-100
+ * → #10263f) koyu mavi yazı koyu mavi zemine düşüyor ve "3 kayıt
+ * seçili" neredeyse okunmaz hâle geliyordu. Sabit bir renk yerine
+ * temayla birlikte dönen `--cy-text` kullanmak iki temada da
+ * kontrastı garanti eder. */
 .cy-bulk-bar__count {
     font-size: .88rem;
-    color: var(--cy-brand-700);
+    color: var(--cy-text);
     white-space: nowrap;
+}
+
+.cy-bulk-bar__count strong {
+    color: var(--cy-brand-600);
 }
 
 .cy-bulk-bar__actions {
@@ -80,7 +183,93 @@
 #select_all_matching {
     font-size: .82rem;
     text-decoration: underline;
-    white-space: nowrap;
+    text-align: left;
+}
+
+
+/* ------------------------------------------------------------------
+ *  MOBİLDE: EKRANIN ALTINA SABİTLENMİŞ TOPLU İŞLEM ÇUBUĞU
+ * ------------------------------------------------------------------
+ *  ÖLÇÜLEN SORUN: çubuk akış içinde, tablonun ÜSTÜNDEYDİ. Telefonda
+ *  kullanıcı listeyi aşağı kaydırıp 12. satırı işaretlediğinde çubuk
+ *  ekranın çok yukarısında kalıyordu; "seçtim ama ne olacak?" sorusu
+ *  cevapsız kalıyor, kullanıcı işlemi bulmak için yukarı kaydırmak
+ *  zorunda kalıyordu. Seçim yaparken ekranda görünmeyen bir eylem
+ *  çubuğu, olmayan bir eylem çubuğuyla aynı şeydir.
+ *
+ *  Çözüm: mobilde çubuk ekranın altına sabitlenir — başparmağın
+ *  doğal olarak durduğu yer. Sayfanın son satırı çubuğun altında
+ *  kalmasın diye <body>'ye seçim varken alt boşluk eklenir
+ *  (body.cy-bulk-active, table.js updateBulkBar() tarafından).
+ * ------------------------------------------------------------------ */
+@media (max-width: 767.98px) {
+    .cy-bulk-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1035;              /* Modal (1055) altında, içerik üstünde. */
+        margin: 0;
+        padding: .75rem .9rem;
+
+        /* Sabit çubuk kartın parçası gibi değil, ekranın parçası gibi
+         * durmalı: üst köşeler yuvarlak, alt köşeler düz. */
+        border: 0;
+        border-top: 2px solid var(--cy-brand-400);
+        border-radius: var(--cy-radius) var(--cy-radius) 0 0;
+        background: var(--cy-surface);
+        box-shadow: 0 -8px 24px rgba(6, 19, 33, .18);
+
+        /* Çentikli / gestür çubuklu telefonlarda alt güvenli alan. */
+        padding-bottom: calc(.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .cy-bulk-bar__inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: .6rem;
+    }
+
+    .cy-bulk-bar__info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .15rem;
+    }
+
+    .cy-bulk-bar__count {
+        font-size: .95rem;
+        font-weight: 600;
+    }
+
+    /* Üç eylem: "Durumu Değiştir" ve "Sil" yan yana (en sık kullanılan
+     * ikisi), "Seçimi Temizle" altta tam genişlik. */
+    .cy-bulk-bar__actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem;
+        margin-left: 0;
+    }
+
+    /* .dropdown bir grid hücresi olur; içindeki tetikleyici butona
+     * HTML'de w-100 verildiği için hücreyi tam doldurur. (display:
+     * contents DENENDİ ve BIRAKILDI: kutuyu ortadan kaldırdığı için
+     * Bootstrap'in açılır menü konumlandırması bozuluyordu.) */
+    .cy-bulk-bar__actions .dropdown { display: block; }
+
+    .cy-bulk-bar__actions .cy-btn--sm {
+        min-height: 44px;           /* Dokunma hedefi alt sınırı. */
+        font-size: .9rem;
+        padding: .5rem .6rem;
+    }
+
+    #clear_selection { grid-column: 1 / -1; }
+
+    /* Açılır menü sabit çubuğun ÜSTÜNE açılmalı; aşağıda ekran yok. */
+    .cy-bulk-bar__actions .dropdown-menu { width: 100%; }
+
+    body.cy-bulk-active {
+        padding-bottom: 11rem;
+    }
 }
 
 .cy-btn--sm {
@@ -112,17 +301,258 @@
     text-align: center;
 }
 
+/* Shift + tık ile aralık seçerken tarayıcı, iki kutucuk arasındaki
+ * METNİ seçmeye çalışır ve satırlar maviye boyanır. İşlevi bozmaz
+ * ama "yanlış bir şey yaptım" hissi verir; seçim kapatılır. */
+#subscriber_table td.cy-cell-check {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 .cy-row-check,
-#select_all_page {
+.js-select-all-page {
     cursor: pointer;
 }
 
 .cy-row-check:disabled,
-#select_all_page:disabled {
+.js-select-all-page:disabled {
     /* "Filtreye uyan tümü" modunda kutular kilitlenir (tek tek
      * kaldırmak anlamsızdır); ama görsel olarak SOLUK değil dolgun
      * görünsün ki "hâlâ seçili" mesajı net kalsın. */
     opacity: 1;
+}
+
+/* Seçili satır: kutucuğa bakmadan da anlaşılsın. Masaüstünde ince bir
+ * zemin rengi yeter; mobil kart görünümünde sol kenara renkli bir
+ * şerit eklenir (aşağıya bkz.). */
+#subscriber_table tbody tr.cy-row-selected > td {
+    background-color: var(--cy-brand-100);
+}
+
+
+/* ==================================================================
+ *  MOBİL KART GÖRÜNÜMÜ (< 768px)
+ * ------------------------------------------------------------------
+ *  ÖLÇÜLEN SORUN: 8 sütunlu tablo, `.table-responsive` sayesinde
+ *  telefonda YATAY KAYDIRILABİLİYORDU. Teknik olarak çalışıyordu ama
+ *  pratikte kullanılmazdı: kullanıcı ad-soyadı görürken durumu ve
+ *  işlem düğmelerini göremiyor, seçim kutucuğu ile "Sil" düğmesi
+ *  arasında iki kere sağa-sola kaydırmak gerekiyordu. Toplu işlem
+ *  yapmanın ön koşulu SATIRI TANIYABİLMEKTİR; yatay kaydırma bunu
+ *  imkânsızlaştırıyordu.
+ *
+ *  Çözüm: her <tr> bir KARTA dönüşür. Sütun başlıkları (<thead>)
+ *  gizlenir, her hücrenin başına kendi başlığı `data-label` ile
+ *  yazdırılır (etiketleri table.js rowCallback ekler). Böylece TEK
+ *  bir HTML kaynağı iki farklı yerleşimi besler — sunucu tarafında
+ *  "mobil mi?" diye bir karar verilmez.
+ * ================================================================== */
+@media (max-width: 767.98px) {
+
+    /* Kart yerleşiminde yatay taşma diye bir şey kalmaz. */
+    .table-responsive { overflow-x: visible; }
+
+    /* ÖLÇÜLEN SORUN: kart yerleşimi kurulduktan sonra sayfa MOBİLDE
+     * hâlâ yatay kayıyordu. Sebep CSS değil, DataTables'ın <table>
+     * etiketine yazdığı SATIR İÇİ `style="width: 1140px"` idi — bu
+     * genişlik masaüstü sütun ölçümünden kalıyor ve satır içi olduğu
+     * için sınıf tabanlı kuralları yeniyor. Genişlik taştığı için
+     * kartın sağ üstündeki durum rozeti ve sağa yaslı işlem düğmeleri
+     * ekranın DIŞINDA kalıyordu. Satır içi stili yenmenin tek yolu
+     * !important olduğu için burada bilinçli olarak kullanılıyor. */
+    #subscriber_table {
+        width: 100% !important;
+        table-layout: auto;
+    }
+
+    #subscriber_table thead { display: none; }
+
+    #subscriber_table,
+    #subscriber_table tbody,
+    #subscriber_table tr {
+        display: block;
+        width: 100%;
+    }
+
+    /* ÖLÇÜLDÜ: hücrelere `width: 100%` verilince genişlik satırın
+     * İÇ genişliğine değil daha geniş bir kutuya göre çözülüyor ve
+     * hücrenin dolgu kutusu satırın 70px dışına taşıyordu (metin
+     * görünür durumda kalsa da). Blok bir öge zaten kapsayıcısını
+     * doldurur; genişliği hiç yazmamak doğrusu. */
+    #subscriber_table td {
+        display: block;
+        width: auto;
+    }
+
+    #subscriber_table tr {
+        position: relative;
+        margin-bottom: .75rem;
+        padding: .8rem .9rem .65rem 2.9rem;   /* Sol boşluk: kutucuk. */
+        border: 1px solid var(--cy-border);
+        border-left: 3px solid transparent;
+        border-radius: var(--cy-radius);
+        background: var(--cy-surface);
+        box-shadow: var(--cy-shadow-sm);
+    }
+
+    #subscriber_table tbody tr.cy-row-selected {
+        border-left-color: var(--cy-brand-600);
+        background: var(--cy-brand-100);
+    }
+
+    #subscriber_table tbody tr.cy-row-selected > td {
+        background-color: transparent;        /* Renk artık kartın kendisinde. */
+    }
+
+    /* Hücre gövdesi: solda başlık, sağda değer. */
+    #subscriber_table td {
+        border: 0;
+        padding: .3rem 0;
+        text-align: left !important;          /* DataTables'ın text-center'ını ez. */
+        font-size: .9rem;
+    }
+
+    #subscriber_table td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: .1rem;
+        color: var(--cy-text-muted);
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    /* --- Kutucuk: kartın sol üstünde, geniş dokunma alanıyla --- */
+    #subscriber_table td.cy-cell-check {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 2.9rem;
+        height: 3.2rem;
+        padding: 0;
+        display: grid;
+        place-items: center;
+    }
+
+    #subscriber_table td.cy-cell-check::before { content: none; }
+
+    #subscriber_table .cy-row-check {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    #select_all_matching {
+        min-height: 34px;
+        font-size: .85rem;
+    }
+
+    /* --- Ad Soyad: kartın başlığı --- */
+    #subscriber_table td.cy-cell-name {
+        padding: 0 5.5rem .35rem 0;           /* Sağ boşluk: durum rozeti. */
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.3;
+        color: var(--cy-text);
+        word-break: break-word;
+    }
+
+    #subscriber_table td.cy-cell-name::before { content: none; }
+
+    /* --- Durum rozeti: kartın sağ üstü --- */
+    #subscriber_table td.cy-cell-status {
+        position: absolute;
+        right: .9rem;
+        top: .8rem;
+        width: auto;
+        padding: 0;
+    }
+
+    #subscriber_table td.cy-cell-status::before { content: none; }
+
+    /* --- Kayıt no: adın hemen altında, satır içi ve sönük --- */
+    #subscriber_table td.cy-cell-id {
+        padding: 0 0 .5rem;
+        font-size: .78rem;
+    }
+
+    #subscriber_table td.cy-cell-id::before {
+        display: inline;
+        margin-right: .15rem;
+        content: '#';
+        letter-spacing: 0;
+    }
+
+    /* --- Etiketli alanlar: etiket solda, değer sağda ---
+     * Etiketi değerin ÜSTÜNE yazmak her alanı iki satıra çıkarıyor ve
+     * kart ~290px'e uzuyordu; telefonda ekrana ancak üç kayıt
+     * sığıyordu. Yan yana dizilince kart ~200px'e iner, aynı ekranda
+     * bir kayıt daha görünür — toplu işlemde "ne kadarını bir bakışta
+     * görebiliyorum" doğrudan işin hızıdır. */
+    #subscriber_table td.cy-cell-email,
+    #subscriber_table td.cy-cell-segment,
+    #subscriber_table td.cy-cell-date {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .28rem 0;
+        text-align: right !important;
+    }
+
+    #subscriber_table td.cy-cell-email::before,
+    #subscriber_table td.cy-cell-segment::before,
+    #subscriber_table td.cy-cell-date::before {
+        margin-bottom: 0;
+        flex: 0 0 auto;
+        white-space: nowrap;
+        line-height: 1.6;
+    }
+
+    /* E-posta uzun olur; kartta kırılmalı, taşmamalı. */
+    #subscriber_table td.cy-cell-email .cy-nowrap { white-space: normal; }
+    #subscriber_table td.cy-cell-email { word-break: break-word; }
+
+    /* --- İşlemler: kartın altında, ayırıcı çizgiyle --- */
+    #subscriber_table td.cy-cell-actions {
+        margin-top: .5rem;
+        padding-top: .55rem;
+        border-top: 1px dashed var(--cy-border);
+    }
+
+    #subscriber_table td.cy-cell-actions::before { content: none; }
+
+    /* .cy-actions `inline-flex`tir (bkz. cilginyazilim.css); yani
+     * içeriği kadar yer kaplar ve `justify-content` onu hizalamaz.
+     * ÖLÇÜLDÜ: düğmeler kartın SOLUNDA kalıyordu. Satır içi bir
+     * kutuyu hizalayan şey kapsayıcının `text-align` değeridir. */
+    #subscriber_table td.cy-cell-actions {
+        text-align: right !important;
+    }
+
+    #subscriber_table td.cy-cell-actions .cy-actions {
+        gap: .5rem;
+    }
+
+    /* Dokunma hedefi: 32px'lik ikon düğmeleri parmakla ıskalanır. */
+    #subscriber_table td.cy-cell-actions .cy-btn-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.05rem;
+    }
+
+    /* "Kayıt bulunamadı" satırı kart olarak değil, düz metin durmalı. */
+    #subscriber_table td.dataTables_empty {
+        padding: 1.5rem .5rem;
+        text-align: center !important;
+    }
+
+    #subscriber_table td.dataTables_empty::before { content: none; }
+
+    #subscriber_table tr:has(> td.dataTables_empty) {
+        padding: 0;
+        border-left-color: var(--cy-border);
+    }
 }
 
 
@@ -173,8 +603,30 @@
     margin: 0 !important;
 }
 
+/* Mobilde alt çubuk üç satıra ayrılır: önce sayfalama (en sık
+ * dokunulan), sonra bilgi metni, en altta sayfa uzunluğu. Sıralamayı
+ * `order` ile değiştirmek DOM'u bozmadan öncelik kurmayı sağlar. */
 @media (max-width: 575.98px) {
-    .cy-bottom-bar { justify-content: center; text-align: center; }
+    .cy-bottom-bar {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: .85rem;
+    }
+
+    .cy-bottom-bar__pagination { order: 1; }
+    .cy-bottom-bar__info       { order: 2; }
+    .cy-bottom-bar__length     { order: 3; }
+
+    .cy-bottom-bar__info .dataTables_info { white-space: normal; }
+
+    /* Sayfalama düğmeleri parmakla vurulabilir olmalı. */
+    .cy-bottom-bar__pagination .page-link {
+        min-width: 42px;
+        min-height: 42px;
+        display: grid;
+        place-items: center;
+    }
 }
 
 
@@ -200,4 +652,123 @@
 .delete-icon--danger {
     background: rgba(220, 38, 38, .12);
     color: var(--cy-danger);
+}
+
+
+/* ==================================================================
+ *  ALTBİLGİ BAĞLANTILARI (kütüphane / anlatım / depo)
+ * ------------------------------------------------------------------
+ *  Masaüstünde tek satır, ayraçlarla. Mobilde ayraçlar gizlenir ve
+ *  bağlantılar alt alta, dokunulabilir yükseklikte kutulara dönüşür —
+ *  yan yana duran metin bağlantıları parmakla ıskalanır.
+ * ================================================================== */
+.cy-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem .6rem;
+}
+
+.cy-footer-links__sep { color: var(--cy-border); }
+
+@media (max-width: 575.98px) {
+    .cy-footer-links {
+        flex-direction: column;
+        align-items: stretch;
+        gap: .5rem;
+    }
+
+    .cy-footer-links__sep { display: none; }
+
+    .cy-footer-links a {
+        display: block;
+        min-height: 44px;
+        padding: .7rem .9rem;
+        border: 1px solid var(--cy-border);
+        border-radius: var(--cy-radius-sm);
+        background: var(--cy-surface);
+    }
+}
+
+
+/* ==================================================================
+ *  MOBİL: BAŞLIK, BİLDİRİM VE PENCERELER
+ * ================================================================== */
+@media (max-width: 767.98px) {
+
+    /* --- Kart başlığı ---
+     * Marka bloğu ile sağdaki düğmeler dar ekranda birbirine giriyordu.
+     * Alt alta dizilir; "Yeni Abone" tam genişlik olur ki başparmakla
+     * ıskalanmasın. */
+    .cy-card__header > .d-flex {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: .9rem !important;
+    }
+
+    .cy-card__header .d-flex .d-flex {
+        justify-content: space-between;
+        gap: .5rem !important;
+    }
+
+    #add_button {
+        flex: 1 1 auto;
+        min-height: 44px;
+    }
+
+    .cy-brand__subtitle { font-size: .78rem; }
+
+    /* --- Altbilgi şeridi --- */
+    .cy-card__footer {
+        flex-direction: column;
+        gap: .25rem !important;
+        text-align: center;
+        font-size: .78rem;
+    }
+
+    /* --- Bildirimler ---
+     * Toplu işlem çubuğu ekranın ALTINI kapladığı için bildirimler
+     * ÜSTTE kalır; iki sabit öge çakışmaz. Dar ekranda tam genişliğe
+     * yayılırlar, köşeye sıkışıp okunmaz hâle gelmezler. */
+    .cy-toast-container {
+        left: 0;
+        right: 0;
+        width: 100%;
+        padding: .6rem !important;
+    }
+
+    .cy-toast { width: 100%; }
+
+    /* --- Modal pencereler ---
+     * Dar ekranda ortalanmış küçük bir kutu yerine, ekranın altından
+     * yükselen geniş bir yaprak: hem daha çok alan verir hem de
+     * düğmeleri başparmağın yanına getirir. */
+    .cy-modal .modal-dialog {
+        margin: .5rem;
+    }
+
+    .cy-modal .modal-dialog.modal-sm {
+        max-width: none;
+    }
+
+    .cy-modal .modal-footer .cy-btn {
+        flex: 1 1 auto;
+        min-height: 44px;
+    }
+
+    .cy-modal .form-control,
+    .cy-modal .form-select {
+        /* 16px altındaki yazı boyutu iOS Safari'de odaklanınca sayfayı
+         * OTOMATİK YAKINLAŞTIRIR; kullanıcı formu doldurduktan sonra
+         * uzaklaştırmak zorunda kalır. 16px bu davranışı kapatır. */
+        font-size: 16px;
+    }
+
+    .delete-icon {
+        width: 54px;
+        height: 54px;
+        font-size: 1.5rem;
+        margin-bottom: .75rem;
+    }
 }

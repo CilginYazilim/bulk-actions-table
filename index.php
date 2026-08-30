@@ -34,6 +34,27 @@ $csrfToken = csrf_token();
     <link rel="stylesheet" href="assets/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="assets/css/cilginyazilim.css">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= filemtime(__DIR__ . '/assets/css/style.css') ?>">
+
+    <!-- ================================================================
+         TEMA: SAYFA ÇİZİLMEDEN ÖNCE UYGULANIR
+         ----------------------------------------------------------------
+         Bu betik bilerek <head> içinde ve satır içindedir. Tema tercihi
+         CSS yüklendikten SONRA JavaScript ile uygulansaydı, kullanıcı
+         koyu temada bile bir anlığına BEYAZ bir ekran görürdü (FOUC).
+         Kayıtlı tercih yoksa hiçbir öznitelik yazılmaz; karar
+         cilginyazilim.css'teki `prefers-color-scheme` kuralına, yani
+         İŞLETİM SİSTEMİ ayarına bırakılır.
+         ================================================================ -->
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('cy-theme');
+                if (saved === 'dark' || saved === 'light') {
+                    document.documentElement.setAttribute('data-cy-theme', saved);
+                }
+            } catch (e) { /* Gizli sekmede localStorage erişimi hata verebilir. */ }
+        })();
+    </script>
 </head>
 
 <body class="cy-app">
@@ -62,6 +83,11 @@ $csrfToken = csrf_token();
                         <span class="cy-badge cy-badge--glass">
                             Toplam <strong id="total_records">0</strong> abone
                         </span>
+                        <button type="button" id="theme_toggle" class="cy-theme-toggle"
+                                title="Temayı değiştir" aria-label="Temayı değiştir">
+                            <span id="theme_toggle_icon" aria-hidden="true">🌙</span>
+                        </button>
+
                         <button type="button" id="add_button" class="btn cy-btn cy-btn--onbrand">
                             <span aria-hidden="true">＋</span> Yeni Abone
                         </button>
@@ -82,7 +108,38 @@ $csrfToken = csrf_token();
                             <option value="<?= e($value) ?>"><?= e($meta['label']) ?></option>
                         <?php endforeach; ?>
                     </select>
+
+                    <!-- ========================================================
+                         MOBİL SIRALAMA
+                         --------------------------------------------------------
+                         Mobilde tablo başlığı (<thead>) gizlenir; satırlar kart
+                         olarak dizilir (bkz. style.css mobil bölümü). Başlık
+                         gizlenince SIRALAMAYA TIKLANACAK YER DE KAYBOLUR.
+                         Bu açılır liste o boşluğu doldurur: DataTables'ın
+                         order() çağrısını sütun indisiyle sürer, yani masaüstü
+                         başlık tıklamasıyla BİREBİR aynı yolu kullanır.
+                         ======================================================== -->
+                    <select id="mobile_sort" class="form-select cy-toolbar__sort d-md-none"
+                            aria-label="Sıralama ölçütü">
+                        <option value="1|desc">En yeni kayıt</option>
+                        <option value="1|asc">En eski kayıt</option>
+                        <option value="2|asc">Ad Soyad (A→Z)</option>
+                        <option value="2|desc">Ad Soyad (Z→A)</option>
+                        <option value="3|asc">E-posta (A→Z)</option>
+                        <option value="4|asc">Segment (A→Z)</option>
+                        <option value="5|asc">Duruma göre</option>
+                    </select>
                 </div>
+
+                <!-- Mobilde <thead> gizli olduğu için başlıktaki "tümünü seç"
+                     kutucuğu da görünmez. Bu satır onun mobil karşılığıdır;
+                     ikisi de .js-select-all-page sınıfını taşır ve table.js
+                     tarafında TEK bir olay dinleyicisiyle yönetilir. -->
+                <label class="cy-select-all-mobile d-md-none" for="select_all_page_mobile">
+                    <input type="checkbox" class="form-check-input js-select-all-page"
+                           id="select_all_page_mobile">
+                    <span>Bu sayfadaki tümünü seç</span>
+                </label>
 
                 <!-- ================================================================
                      TOPLU İŞLEM ÇUBUĞU
@@ -92,44 +149,49 @@ $csrfToken = csrf_token();
                      şey var, ne yapabilirim?" sorusunun cevabını kullanıcının
                      gözünün önüne getirir — ayrı bir menüde aramaz.
                      ================================================================ -->
-                <div id="bulk_bar" class="cy-bulk-bar d-none">
-                    <span class="cy-bulk-bar__count">
-                        <strong id="bulk_count">0</strong> kayıt seçili
-                    </span>
+                <div id="bulk_bar" class="cy-bulk-bar d-none" role="region" aria-label="Toplu işlem çubuğu">
+                    <div class="cy-bulk-bar__inner">
 
-                    <!--
-                        "Filtreye uyan TÜMÜNÜ seç" bağlantısı: kullanıcı bu
-                        sayfadaki tüm kutucukları işaretlediğinde VE daha
-                        fazla eşleşen kayıt olduğunda görünür (bkz. table.js
-                        updateBulkBar()). Tıklanınca seçim modu "scope=filtered"
-                        olur; id listesi yerine arama koşulu sunucuya gider.
-                    -->
-                    <button type="button" id="select_all_matching" class="btn btn-link btn-sm p-0 d-none"></button>
+                        <div class="cy-bulk-bar__info">
+                            <span class="cy-bulk-bar__count" aria-live="polite">
+                                <strong id="bulk_count">0</strong> kayıt seçili
+                            </span>
 
-                    <div class="cy-bulk-bar__actions">
-                        <div class="dropdown">
-                            <button type="button" class="btn cy-btn cy-btn--outline cy-btn--sm dropdown-toggle"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                Durumu Değiştir
-                            </button>
-                            <ul class="dropdown-menu">
-                                <?php foreach (SUBSCRIBER_STATUSES as $value => $meta): ?>
-                                    <li>
-                                        <a class="dropdown-item js-bulk-status" href="#" data-status="<?= e($value) ?>">
-                                            <?= e($meta['label']) ?> yap
-                                        </a>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
+                            <!--
+                                "Filtreye uyan TÜMÜNÜ seç" bağlantısı: kullanıcı bu
+                                sayfadaki tüm kutucukları işaretlediğinde VE daha
+                                fazla eşleşen kayıt olduğunda görünür (bkz. table.js
+                                updateBulkBar()). Tıklanınca seçim modu "scope=filtered"
+                                olur; id listesi yerine arama koşulu sunucuya gider.
+                            -->
+                            <button type="button" id="select_all_matching" class="btn btn-link btn-sm p-0 d-none"></button>
                         </div>
 
-                        <button type="button" id="bulk_delete_button" class="btn btn-danger cy-btn cy-btn--sm">
-                            Seçilenleri Sil
-                        </button>
+                        <div class="cy-bulk-bar__actions">
+                            <div class="dropdown">
+                                <button type="button" class="btn cy-btn cy-btn--outline cy-btn--sm dropdown-toggle w-100"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    Durumu Değiştir
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <?php foreach (SUBSCRIBER_STATUSES as $value => $meta): ?>
+                                        <li>
+                                            <a class="dropdown-item js-bulk-status" href="#" data-status="<?= e($value) ?>">
+                                                <?= e($meta['label']) ?> yap
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
 
-                        <button type="button" id="clear_selection" class="btn btn-outline-secondary cy-btn cy-btn--sm">
-                            Seçimi Temizle
-                        </button>
+                            <button type="button" id="bulk_delete_button" class="btn btn-danger cy-btn cy-btn--sm">
+                                Seçilenleri Sil
+                            </button>
+
+                            <button type="button" id="clear_selection" class="btn btn-outline-secondary cy-btn cy-btn--sm">
+                                Seçimi Temizle
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -138,8 +200,8 @@ $csrfToken = csrf_token();
                         <thead>
                             <tr>
                                 <th scope="col">
-                                    <input type="checkbox" class="form-check-input" id="select_all_page"
-                                           aria-label="Bu sayfadaki tümünü seç">
+                                    <input type="checkbox" class="form-check-input js-select-all-page"
+                                           id="select_all_page" aria-label="Bu sayfadaki tümünü seç">
                                 </th>
                                 <th scope="col">#</th>
                                 <th scope="col">Ad Soyad</th>
@@ -163,15 +225,26 @@ $csrfToken = csrf_token();
         </div>
 
         <div class="cy-footer-note mt-4">
-            <p class="mb-1">
+            <p class="mb-2">
                 Bu açık kaynak örnek, <a href="https://cilginyazilim.com" target="_blank" rel="noopener">cilginyazilim.com</a>
                 tarafından geliştirilmiştir. MIT lisanslıdır.
             </p>
-            <p class="mb-0">
-                Kaynak kod:
-                <a href="https://github.com/CilginYazilim/bulk-actions-table"
-                   target="_blank" rel="noopener">github.com/CilginYazilim/bulk-actions-table</a>
-            </p>
+
+            <!-- Örnek kodlar / kütüphane: ziyaretçinin bu sayfadan sonra
+                 gideceği en olası yer, aynı ailedeki diğer örneklerdir. -->
+            <nav class="cy-footer-links" aria-label="Kaynak bağlantıları">
+                <a href="https://cilginyazilim.com/kutuphane" target="_blank" rel="noopener">
+                    📚 Örnek Kodlar &amp; Kütüphane
+                </a>
+                <span class="cy-footer-links__sep" aria-hidden="true">·</span>
+                <a href="https://cilginyazilim.com/kutuphane/toplu-islem-tablosu" target="_blank" rel="noopener">
+                    📄 Bu Örneğin Anlatımı
+                </a>
+                <span class="cy-footer-links__sep" aria-hidden="true">·</span>
+                <a href="https://github.com/CilginYazilim/bulk-actions-table" target="_blank" rel="noopener">
+                    💻 GitHub Deposu
+                </a>
+            </nav>
         </div>
     </div>
 

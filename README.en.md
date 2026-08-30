@@ -7,11 +7,14 @@
 **Multi-select and bulk actions on a server-side DataTable.**
 Selected records · ALL matching the filter · Confirmation with the real count · Confirmed-count guard
 
+[![Version](https://img.shields.io/badge/Version-v1.1.0-0b5cb5?style=flat-square)](https://github.com/CilginYazilim/bulk-actions-table/releases)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/)
 [![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![License](https://img.shields.io/badge/License-MIT-brightgreen?style=flat-square)](LICENSE)
 
-[cilginyazilim.com](https://cilginyazilim.com) &nbsp;·&nbsp; [Türkçe](README.md) | **English**
+[cilginyazilim.com](https://cilginyazilim.com) &nbsp;·&nbsp; [Code library](https://cilginyazilim.com/kutuphane) &nbsp;·&nbsp; [Write-up for this example](https://cilginyazilim.com/kutuphane/toplu-islem-tablosu)
+
+[Türkçe](README.md) | **English**
 
 </div>
 
@@ -101,6 +104,76 @@ The UI treats 409 not as an error but as a brake: it refreshes the list and asks
 
 ---
 
+## Mobile: a table should not be a table on a phone
+
+An eight-column table does not fit on a phone. The common answer is `overflow-x: auto` — **horizontal scrolling** — and that is what this project did. It worked technically; it did not work in practice:
+
+> While reading a subscriber’s name, the user could not see their status or the action buttons. Getting from the checkbox to the “Delete” button meant **scrolling sideways twice**.
+
+The precondition for a bulk action is **being able to recognise the row**. A user who confirms without seeing which record they ticked has not really confirmed. Horizontal scrolling made that impossible.
+
+### The fix: same HTML, two layouts
+
+Below `768px` every `<tr>` becomes a **card**. The server never decides “is this mobile?” — a single HTML output feeds both layouts:
+
+| Desktop | Mobile |
+|---------|--------|
+| `<thead>` column headers | Hidden; each cell prints its own header from `data-label` |
+| Name is one cell | The card’s **title** (bold, larger) |
+| Status badge is one cell | The card’s **top-right corner** |
+| Checkbox is the first column | The card’s **top-left corner**, inside a 44px touch area |
+| Action buttons are the last column | **Below** the card, after a dashed divider, 44×44px |
+| Sort by clicking a header | A **sort dropdown** in the toolbar (`#mobile_sort`) |
+| “Select all” checkbox in the header | A **full-width labelled row** above the table |
+
+The labels are added by `rowCallback` in `table.js`; the layout is pure CSS. **Not one line** of PHP had to change.
+
+<div align="center">
+
+<img src="assets/images/screenshot-mobile.png" alt="Mobile card layout with the bulk action bar pinned to the bottom" width="330">
+&nbsp;&nbsp;
+<img src="assets/images/screenshot-mobile-dark.png" alt="The same screen in dark mode" width="330">
+
+<sub>At 390px wide. Three cards were selected as a range with <b>Shift + click</b>; selected cards are marked by the blue left edge<br>and the bulk action bar is pinned to the bottom of the screen. On the right, the same screen in dark mode.</sub>
+
+</div>
+
+### The bulk action bar is pinned to the bottom
+
+The bar sat in the flow, **above** the table. On a phone, once the user scrolled down and ticked the 12th row, the bar was far off-screen.
+
+> **An action bar you cannot see while selecting is the same as no action bar at all.**
+
+On mobile it is now `position: fixed` at the bottom of the screen — where the thumb naturally rests. The three actions form a grid (“Change status” + “Delete selected” side by side, “Clear selection” full width), each at least 44px tall. `<body>` gets bottom padding while a selection exists (`body.cy-bulk-active`) so the last row is never hidden underneath, and `env(safe-area-inset-bottom)` is accounted for on notched phones.
+
+Toasts were deliberately left at the **top**: two fixed elements would collide at the bottom edge.
+
+### Other mobile fixes
+
+| Issue | Why it mattered | Fix |
+|-------|-----------------|-----|
+| Toolbar used `flex-wrap: nowrap` + horizontal scroll | Search box and status filter squeezed to unusable widths, and the hardest interaction to discover on touch (horizontal scroll) was required | Stacked full-width on narrow screens |
+| Form fields below `16px` | iOS Safari **auto-zooms** on focus, forcing the user to pinch back out after filling the form | `16px` for modal `input`/`select` on mobile |
+| 32px icon buttons | Missed by fingers — and hitting the wrong row’s “Delete” is irreversible | 44×44px |
+| Small pagination buttons | Same problem, in the most-tapped place | `min-width/height: 42px`; on mobile the bottom bar reorders to **pagination → info → page length** |
+| `modal-sm` got even narrower on small screens | Confirmation text wrapped awkwardly | `max-width` dropped on mobile, footer buttons full width |
+
+---
+
+## UI improvements (v1.1.0)
+
+**Shift + click range selection.** Ticking 30 rows one by one on a 40-row page is tiring and invites mis-taps. The range is computed from the **on-screen order** (`lastPageIds`). The handler listens to `click` rather than `change` — the `change` event does not carry `shiftKey`.
+
+**Selected rows are now visible.** A subtle background on desktop, a brand-blue left edge on the mobile card (`.cy-row-selected`). You can tell which cards are selected without looking at the checkboxes.
+
+**`Esc` drops the selection.** The fastest way out of bulk-action mode. While a modal is open, `Esc` is left to Bootstrap — having both fire would produce the “I wanted to close the dialog, and my selection vanished too” surprise.
+
+**Light / dark theme toggle.** The design system (`cilginyazilim.css`) already supported dark mode through two paths: `prefers-color-scheme` (the OS) and `<html data-cy-theme="dark">` (the user). The button only writes the second one and stores it in `localStorage`; untouched, the decision stays with the OS. The preference is applied by an **inline script in `<head>`** before the page paints — applied later, dark-mode users would see one white frame (FOUC).
+
+**MEASURED ISSUE — “Clear selection” only did half the job.** It emptied the internal state (`selectedIds`) and hid the bar, but **left the on-screen checkboxes ticked**: after clearing, the table still looked like “10 rows selected”. `resetSelection()` now syncs the checkboxes too (`syncPageCheckboxes()`).
+
+---
+
 ## Issues measured and closed
 
 Every item below was **measured** over HTTP against the running install, fixed, and **measured again**.
@@ -179,7 +252,7 @@ In the browser: **http://localhost/bulk-actions-table/**
 
 ```
 bulk-actions-table/
-├── index.php                  ← UI: table, bulk action bar, three modals
+├── index.php                  ← UI: table, bulk action bar, three modals, theme script
 ├── cy_bulk.sql                ← Database setup (cy_bulk, 60 sample subscribers)
 ├── .htaccess                  ← Directory listing off, .sql/.md denied, security headers
 ├── system/
@@ -189,7 +262,7 @@ bulk-actions-table/
 │   └── ajax.php               ← 8 endpoints + resolve_bulk_scope() + execute_bulk()
 └── assets/
     ├── css/cilginyazilim.css  ← Brand design system (shared)
-    ├── css/style.css          ← Page-specific styles
+    ├── css/style.css          ← Page-specific styles + MOBILE CARD LAYOUT
     └── js/table.js            ← Selection state: selectedIds / selectAllMatching
 ```
 
@@ -206,8 +279,11 @@ bulk-actions-table/
 | `resolve_bulk_scope()` | `ajax.php` | **Resolves which records the request targets.** Returns `[WHERE, named params, real count]`. |
 | `execute_bulk()` | `ajax.php` | **The single exit gate for bulk actions.** Count guard + transaction + one binding path. |
 | `handle_bulk_preview()` | `ajax.php` | Produces the real number shown in the confirmation dialog. |
-| `restoreCheckboxState()` | `table.js` | Rebuilds checkbox marks from internal state after a page change. |
+| `restoreCheckboxState()` | `table.js` | Rebuilds the checkbox marks and `lastPageIds` after a page change. |
+| `syncPageCheckboxes()` | `table.js` | Syncs only the checkbox **appearance**; does not disturb the range-selection anchor. |
 | `scopeParams()` | `table.js` | The client-side mirror of `resolve_bulk_scope()`. |
+| `rowCallback` | `table.js` | Writes `data-label` on every cell — the column headers of the mobile card layout. |
+| `applyTheme()` | `table.js` | Stores the light/dark preference in `<html data-cy-theme>` + `localStorage`. |
 
 ### Where does the selection live?
 
@@ -324,13 +400,44 @@ The common thread: in each case the user can select **more than they can see**, 
 
 ---
 
+## Changelog
+
+### v1.1.0 — Mobile experience and selection ergonomics
+
+- **Mobile card layout** — below `768px` every row becomes a card; horizontal scrolling is gone.
+- **Bulk action bar pinned to the bottom** on mobile — always visible while selecting, every action ≥ 44px.
+- **Mobile sort dropdown** and **mobile “select all on this page”** — replacements for the two controls lost when `<thead>` is hidden.
+- **Shift + click range selection.**
+- **Selected-row indicator** (`.cy-row-selected`).
+- **`Esc` clears the selection.**
+- **Light / dark theme toggle** — no FOUC, stored in `localStorage`.
+- **Fix:** “Clear selection” left the on-screen checkboxes ticked.
+- iOS Safari auto-zoom, touch target sizes, `safe-area-inset` and the mobile pagination layout.
+
+### v1.0.0 — Initial release
+
+Server-side DataTables, two bulk-action scopes (`scope=selected` / `scope=filtered`), confirmation with the real count (`bulk_preview`), the confirmed-count guard (`expected_count`), and 10 security/performance issues measured and closed.
+
+---
+
 ## License
 
 MIT — download, use, modify and ship it in commercial projects as you like. See [LICENSE](LICENSE) for details.
 
+---
+
 <div align="center">
 
+### More example code
+
+**[📚 cilginyazilim.com/kutuphane](https://cilginyazilim.com/kutuphane)**
+
+Open-source PHP examples, each one shipped with the issues that were measured and the reasoning behind the fixes.
+
+[📄 Write-up for this example](https://cilginyazilim.com/kutuphane/toplu-islem-tablosu) &nbsp;·&nbsp; [💻 GitHub repository](https://github.com/CilginYazilim/bulk-actions-table)
+
+---
+
 **Çılgın Yazılım** · [cilginyazilim.com](https://cilginyazilim.com)
-[github.com/CilginYazilim/bulk-actions-table](https://github.com/CilginYazilim/bulk-actions-table)
 
 </div>

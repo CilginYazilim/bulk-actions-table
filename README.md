@@ -7,11 +7,14 @@
 **Sunucu taraflı DataTables üzerinde çoklu seçim ve toplu işlem.**
 Seçili kayıtlar · Filtreye uyan TÜMÜ · Gerçek sayıyla onay · Onaylanan sayı denetimi
 
+[![Sürüm](https://img.shields.io/badge/S%C3%BCr%C3%BCm-v1.1.0-0b5cb5?style=flat-square)](https://github.com/CilginYazilim/bulk-actions-table/releases)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net/)
 [![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Lisans](https://img.shields.io/badge/Lisans-MIT-brightgreen?style=flat-square)](LICENSE)
 
-[cilginyazilim.com](https://cilginyazilim.com) &nbsp;·&nbsp; **Türkçe** | [English](README.en.md)
+[cilginyazilim.com](https://cilginyazilim.com) &nbsp;·&nbsp; [Örnek Kodlar & Kütüphane](https://cilginyazilim.com/kutuphane) &nbsp;·&nbsp; [Bu örneğin anlatımı](https://cilginyazilim.com/kutuphane/toplu-islem-tablosu)
+
+**Türkçe** | [English](README.en.md)
 
 </div>
 
@@ -101,6 +104,76 @@ Arayüz 409’u bir hata olarak değil, bir fren olarak karşılar: listeyi taze
 
 ---
 
+## Mobil: tablo, telefonda tablo olmamalı
+
+Sekiz sütunlu bir tablo telefona sığmaz. Yaygın çözüm `overflow-x: auto` ile **yatay kaydırmadır** — ve bu projede de öyleydi. Teknik olarak çalışıyordu; pratikte kullanılamıyordu:
+
+> Kullanıcı ad-soyadı görürken durumu ve işlem düğmelerini göremiyordu. Seçim kutucuğu ile “Sil” düğmesi arasında **iki kere sağa-sola kaydırmak** gerekiyordu.
+
+Toplu işlemin ön koşulu **satırı tanıyabilmektir**. Hangi kaydı işaretlediğini görmeden onay veren bir kullanıcı, aslında onay vermiş sayılmaz. Yatay kaydırma bunu imkânsızlaştırıyordu.
+
+### Çözüm: aynı HTML, iki yerleşim
+
+`< 768px` altında her `<tr>` bir **karta** dönüşür. Sunucu tarafında “mobil mi?” diye bir karar **verilmez** — tek bir HTML çıktısı iki yerleşimi de besler:
+
+| Masaüstü | Mobil |
+|----------|-------|
+| `<thead>` sütun başlıkları | Gizlenir; her hücrenin başlığı `data-label` ile hücrenin üstüne yazılır |
+| Ad Soyad bir hücre | Kartın **başlığı** (kalın, büyük) |
+| Durum rozeti bir hücre | Kartın **sağ üst köşesi** |
+| Kutucuk ilk sütun | Kartın **sol üst köşesi**, 44px’lik dokunma alanı içinde |
+| İşlem düğmeleri son sütun | Kartın **altında**, kesikli ayırıcının ardında, 44×44px |
+| Başlığa tıklayarak sıralama | Araç çubuğundaki **sıralama listesi** (`#mobile_sort`) |
+| Başlıktaki “tümünü seç” kutucuğu | Tablonun üstünde **tam genişlikte etiketli satır** |
+
+Etiketleri `table.js` içindeki `rowCallback` ekler; yerleşimi tamamen CSS kurar. PHP tarafında **tek satır** değişiklik gerekmedi.
+
+<div align="center">
+
+<img src="assets/images/screenshot-mobile.png" alt="Mobil kart görünümü ve ekranın altına sabitlenmiş toplu işlem çubuğu" width="330">
+&nbsp;&nbsp;
+<img src="assets/images/screenshot-mobile-dark.png" alt="Aynı ekran koyu temada" width="330">
+
+<sub>390px genişlikte. Üç kart <b>Shift + tık</b> ile aralık olarak seçildi; seçili kartlar sol kenarındaki mavi şeritten belli oluyor<br>ve toplu işlem çubuğu ekranın altına sabitlenmiş durumda. Sağdaki aynı ekranın koyu tema hâli.</sub>
+
+</div>
+
+### Toplu işlem çubuğu ekranın altına sabitlendi
+
+Çubuk akış içinde, tablonun **üstündeydi**. Telefonda kullanıcı listeyi aşağı kaydırıp 12. satırı işaretlediğinde çubuk ekranın çok yukarısında kalıyordu.
+
+> **Seçim yaparken ekranda görünmeyen bir eylem çubuğu, olmayan bir eylem çubuğuyla aynı şeydir.**
+
+Mobilde çubuk artık `position: fixed` ile ekranın altına — başparmağın doğal olarak durduğu yere — sabitlenir. Üç eylem ızgaraya dizilir (“Durumu Değiştir” + “Seçilenleri Sil” yan yana, “Seçimi Temizle” tam genişlik), hepsi en az 44px yüksekliğindedir. Sayfanın son satırı çubuğun altında kalmasın diye `<body>`’ye seçim varken alt boşluk eklenir (`body.cy-bulk-active`), çentikli telefonlar için `env(safe-area-inset-bottom)` hesaba katılır.
+
+Bildirimler (toast) bilerek **üstte** bırakıldı: iki sabit öge alt kenarda çakışırdı.
+
+### Diğer mobil düzeltmeler
+
+| Sorun | Neden önemliydi | Çözüm |
+|-------|-----------------|-------|
+| Araç çubuğu `flex-wrap: nowrap` + yatay kaydırma | Arama kutusu ve durum listesi kullanılamayacak kadar daralıyor, kullanıcıdan fark etmesi en zor etkileşim (yatay kaydırma) bekleniyordu | Dar ekranda alt alta, her biri tam genişlik |
+| Form alanları `< 16px` | iOS Safari odaklanınca sayfayı **otomatik yakınlaştırıyor**, kullanıcı formu doldurduktan sonra elle uzaklaştırmak zorunda kalıyordu | Modal içindeki `input`/`select` mobilde `16px` |
+| İkon düğmeleri 32px | Parmakla ıskalanıyordu; yanlış satırın “Sil” düğmesine basmak geri dönüşsüz | 44×44px |
+| Sayfalama düğmeleri küçük | Aynı sorun, en sık dokunulan yerde | `min-width/height: 42px`, alt çubuk mobilde **sayfalama → bilgi → uzunluk** sırasına geçer |
+| Küçük modal (`modal-sm`) dar ekranda daha da daralıyordu | Onay metni iki satıra bölünüyordu | Mobilde `max-width` kaldırıldı, düğmeler tam genişlik |
+
+---
+
+## Arayüz geliştirmeleri (v1.1.0)
+
+**Shift + tık ile aralık seçimi.** 40 satırlık bir sayfada 30 satırı tek tek işaretlemek kullanıcıyı yorar ve yanlış tıklamaya davet eder. Aralık, **ekrandaki sıraya** göre hesaplanır (`lastPageIds`). Olay `change` yerine `click` dinlenir — `change` olayı `shiftKey` bilgisini taşımaz.
+
+**Seçili satır artık görünüyor.** Masaüstünde ince bir zemin rengi, mobil kartta sol kenarda marka mavisi bir şerit (`.cy-row-selected`). Kutucuğa bakmadan da hangi kartların seçili olduğu anlaşılır.
+
+**`Esc` seçimi bırakır.** Toplu işlem modundan çıkmanın en hızlı yolu. Bir modal açıkken `Esc` Bootstrap’e bırakılır; iki davranışın çakışması “pencereyi kapatmak istedim, seçimim de gitti” şaşkınlığına yol açardı.
+
+**Açık / koyu tema düğmesi.** Tasarım sistemi (`cilginyazilim.css`) zaten iki yoldan koyu temayı destekliyordu: `prefers-color-scheme` (işletim sistemi) ve `<html data-cy-theme="dark">` (kullanıcı). Düğme yalnızca ikincisini yazar ve `localStorage`’a kaydeder; hiç dokunulmazsa karar işletim sistemine kalır. Tercih, sayfa çizilmeden **`<head>` içindeki satır içi betikle** uygulanır — sonradan uygulansaydı koyu temada bir kare boyunca beyaz ekran görünürdü (FOUC).
+
+**ÖLÇÜLEN SORUN — “Seçimi Temizle” yarım çalışıyordu.** İç durumu (`selectedIds`) boşaltıyor ve çubuğu gizliyordu, ama **ekrandaki kutucuklar işaretli kalıyordu**: seçim temizlendikten sonra tablo hâlâ “10 satır seçili” gibi görünüyordu. `resetSelection()` artık kutucukları da eşitliyor (`syncPageCheckboxes()`).
+
+---
+
 ## Ölçülen ve kapatılan sorunlar
 
 Aşağıdakilerin hepsi çalışan kurulumda HTTP üzerinden **ölçüldü**, düzeltildi ve **yeniden ölçüldü**.
@@ -179,7 +252,7 @@ Tarayıcıdan: **http://localhost/bulk-actions-table/**
 
 ```
 bulk-actions-table/
-├── index.php                  ← Arayüz: tablo, toplu işlem çubuğu, üç modal
+├── index.php                  ← Arayüz: tablo, toplu işlem çubuğu, üç modal, tema betiği
 ├── cy_bulk.sql                ← Veritabanı kurulumu (cy_bulk, 60 örnek abone)
 ├── .htaccess                  ← Dizin listeleme kapalı, .sql/.md engelli, güvenlik başlıkları
 ├── system/
@@ -189,7 +262,7 @@ bulk-actions-table/
 │   └── ajax.php               ← 8 uç nokta + resolve_bulk_scope() + execute_bulk()
 └── assets/
     ├── css/cilginyazilim.css  ← Marka tasarım kalıbı (ortak)
-    ├── css/style.css          ← Sayfaya özel stiller
+    ├── css/style.css          ← Sayfaya özel stiller + MOBİL KART GÖRÜNÜMÜ
     └── js/table.js            ← Seçim durumu: selectedIds / selectAllMatching
 ```
 
@@ -206,8 +279,11 @@ bulk-actions-table/
 | `resolve_bulk_scope()` | `ajax.php` | **İsteğin hangi kayıtları hedeflediğini çözer.** `[WHERE, isimli parametreler, gerçek sayı]` döndürür. |
 | `execute_bulk()` | `ajax.php` | **Toplu işlemin tek çıkış kapısı.** Sayı denetimi + transaction + tek bağlama yolu. |
 | `handle_bulk_preview()` | `ajax.php` | Onay penceresinin göstereceği gerçek sayıyı üretir. |
-| `restoreCheckboxState()` | `table.js` | Sayfa değişince işaretleri iç duruma göre yeniden kurar. |
+| `restoreCheckboxState()` | `table.js` | Sayfa değişince işaret durumunu ve `lastPageIds`’i yeniden kurar. |
+| `syncPageCheckboxes()` | `table.js` | Kutucukların **görünümünü** iç duruma eşitler; aralık seçiminin çıpasını bozmaz. |
 | `scopeParams()` | `table.js` | İstemci tarafında `resolve_bulk_scope()`’un aynadaki karşılığı. |
+| `rowCallback` | `table.js` | Her hücreye `data-label` yazar — mobil kart görünümünün sütun başlıkları. |
+| `applyTheme()` | `table.js` | Açık/koyu tercihini `<html data-cy-theme>` + `localStorage` üzerinden yazar. |
 
 ### Seçim durumu nerede tutulur?
 
@@ -324,13 +400,44 @@ Ortak nokta: hepsinde kullanıcı **gördüğünden fazlasını** seçebilir ve 
 
 ---
 
+## Sürüm geçmişi
+
+### v1.1.0 — Mobil deneyim ve seçim ergonomisi
+
+- **Mobil kart görünümü** — `< 768px` altında her satır bir karta dönüşür; yatay kaydırma tamamen kalktı.
+- **Ekranın altına sabitlenen toplu işlem çubuğu** — seçim yaparken her zaman görünür, tüm eylemler ≥ 44px.
+- **Mobil sıralama listesi** ve **mobil “sayfadaki tümünü seç”** — gizlenen `<thead>`’in kaybettirdiği iki denetimin karşılığı.
+- **Shift + tık ile aralık seçimi.**
+- **Seçili satır göstergesi** (`.cy-row-selected`).
+- **`Esc` ile seçimi bırakma.**
+- **Açık / koyu tema düğmesi** — FOUC’suz, `localStorage`’a kayıtlı.
+- **Düzeltme:** “Seçimi Temizle” ekrandaki kutucukları işaretli bırakıyordu.
+- iOS Safari otomatik yakınlaştırması, dokunma hedefi boyutları, güvenli alan (`safe-area-inset`) ve mobil sayfalama düzeni.
+
+### v1.0.0 — İlk sürüm
+
+Sunucu taraflı DataTables, iki kapsamlı toplu işlem (`scope=selected` / `scope=filtered`), gerçek sayıyla onay (`bulk_preview`), onaylanan sayı denetimi (`expected_count`) ve ölçülüp kapatılan 10 güvenlik/başarım sorunu.
+
+---
+
 ## Lisans
 
 MIT — dilediğiniz gibi indirip kullanabilir, değiştirebilir ve ticari projelerde kullanabilirsiniz. Ayrıntılar için [LICENSE](LICENSE).
 
+---
+
 <div align="center">
 
+### Daha fazla örnek kod
+
+**[📚 cilginyazilim.com/kutuphane](https://cilginyazilim.com/kutuphane)**
+
+Açık kaynak PHP örnekleri, her biri ölçülmüş sorunlar ve gerekçeleriyle birlikte.
+
+[📄 Bu örneğin anlatımı](https://cilginyazilim.com/kutuphane/toplu-islem-tablosu) &nbsp;·&nbsp; [💻 GitHub deposu](https://github.com/CilginYazilim/bulk-actions-table)
+
+---
+
 **Çılgın Yazılım** · [cilginyazilim.com](https://cilginyazilim.com)
-[github.com/CilginYazilim/bulk-actions-table](https://github.com/CilginYazilim/bulk-actions-table)
 
 </div>
