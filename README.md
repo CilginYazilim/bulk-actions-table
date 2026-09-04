@@ -257,6 +257,12 @@ git clone https://github.com/CilginYazilim/bulk-actions-table.git
 mysql -u root -p < bulk-actions-table/cy_bulk.sql
 ```
 
+> **İsteğe bağlı — kendi veritabanı bilgileriniz:**
+> `cp .env.example .env` (Windows: `copy .env.example .env`) deyip `DB_*`
+> satırlarını doldurun. Bu dosya olmadan da çalışır; varsayılanlar yerel bir
+> XAMPP kurulumuna (`root`, boş parola) göredir. `.env` `.gitignore`
+> içindedir — parolanız depoya gitmez.
+
 Tarayıcıdan: **http://localhost/bulk-actions-table/**
 
 > **Canlıya alırken** `system/config.php` içindeki `APP_DEBUG` değerini `false` yapın — açık kaldığında veritabanı hata metinleri istemciye gider.
@@ -308,6 +314,7 @@ bir bölgedeyse bu değişkeni tanımlamanız yeterli, koda dokunmayın.
 ```
 bulk-actions-table/
 ├── index.php                  ← Arayüz: tablo, toplu işlem çubuğu, üç modal, tema betiği
+├── .env.example               ← Veritabanı bilgileri (isteğe bağlı) — .gitignore içinde
 ├── cy_bulk.sql                ← Veritabanı kurulumu (cy_bulk, 60 örnek abone)
 ├── .htaccess                  ← Dizin listeleme kapalı, .sql/.md engelli, güvenlik başlıkları
 ├── system/

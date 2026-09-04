@@ -257,6 +257,12 @@ git clone https://github.com/CilginYazilim/bulk-actions-table.git
 mysql -u root -p < bulk-actions-table/cy_bulk.sql
 ```
 
+> **Optional — your own database credentials:** run
+> `cp .env.example .env` (Windows: `copy .env.example .env`) and fill in the
+> `DB_*` lines. It runs without the file too; the defaults match a local XAMPP
+> install (`root`, empty password). `.env` is in `.gitignore`, so your password
+> never reaches the repository.
+
 In the browser: **http://localhost/bulk-actions-table/**
 
 > **Before going live**, set `APP_DEBUG` to `false` in `system/config.php` — while it is on, database error messages are sent to the client.
@@ -309,6 +315,7 @@ set this variable instead of touching the code.
 ```
 bulk-actions-table/
 ├── index.php                  ← UI: table, bulk action bar, three modals, theme script
+├── .env.example               ← Database credentials (optional) — in .gitignore
 ├── cy_bulk.sql                ← Database setup (cy_bulk, 60 sample subscribers)
 ├── .htaccess                  ← Directory listing off, .sql/.md denied, security headers
 ├── system/
