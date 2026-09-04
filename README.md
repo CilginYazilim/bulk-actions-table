@@ -16,17 +16,34 @@ Seçili kayıtlar · Filtreye uyan TÜMÜ · Gerçek sayıyla onay · Onaylanan 
 
 **Türkçe** | [English](README.en.md)
 
+
+[**▶ Canlı Demo**](https://cilginyazilim.com/kutuphane/uygulama/bulk-actions-table/) · [Kaynak Kütüphanesi](https://cilginyazilim.com/kutuphane/toplu-islem-tablosu) · [cilginyazilim.com](https://cilginyazilim.com)
+
 </div>
 
 ---
 
 <div align="center">
 
-<img src="assets/images/screenshot-bulk-bar.png" alt="Toplu işlem çubuğu ve filtreye uyan tümünü seç bağlantısı" width="880">
+## Canlı Demo
 
-<sub>Bu sayfadaki 10 satır işaretlendi. Çubuk belirdi ve <b>“Filtreye uyan tüm 60 kaydı seç”</b> bağlantısı çıktı —<br>seçimin ikinci anlamına geçiş buradan yapılır.</sub>
+**Kurulum yok, kayıt yok, indirme yok — tarayıcınızdan 3 saniyede deneyin.**
+
+<a href="https://cilginyazilim.com/kutuphane/uygulama/bulk-actions-table/"><img src="https://img.shields.io/badge/CANLI_DEMOYU_A%C3%87-0b5cb5?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=061321" alt="Canlı Demoyu Aç" height="42"></a>
+<a href="https://cilginyazilim.com/kutuphane/toplu-islem-tablosu"><img src="https://img.shields.io/badge/KAYNAK_KODU_%C4%B0NCELE-0ea5e9?style=for-the-badge&logo=readthedocs&logoColor=white&labelColor=061321" alt="Kaynak Kodu İncele" height="42"></a>
+<a href="https://github.com/CilginYazilim/bulk-actions-table/archive/refs/heads/main.zip"><img src="https://img.shields.io/badge/ZIP_%C4%B0ND%C4%B0R-16a34a?style=for-the-badge&logo=github&logoColor=white&labelColor=061321" alt="ZIP İndir" height="42"></a>
+
+<br><br>
+
+<a href="https://cilginyazilim.com/kutuphane/uygulama/bulk-actions-table/" title="Canlı demoyu açmak için tıklayın">
+  <img src="assets/images/screenshot-bulk-bar.png" alt="Toplu işlem tablosu canlı demo önizlemesi" width="860">
+</a>
+
+<sub>Bu sayfadaki 10 satır işaretlendi. Çubuk belirdi ve <b>“Filtreye uyan tüm 60 kaydı seç”</b> bağlantısı çıktı —<br>seçimin ikinci anlamına geçiş buradan yapılır.<br>▲ Görsele tıklayarak demoyu açabilirsiniz</sub>
 
 </div>
+
+> **Satır seçin, "tümünü seç"e basın, silmeden önce sayının doğrulandığını görün.**
 
 ---
 
@@ -245,6 +262,44 @@ Tarayıcıdan: **http://localhost/bulk-actions-table/**
 > **Canlıya alırken** `system/config.php` içindeki `APP_DEBUG` değerini `false` yapın — açık kaldığında veritabanı hata metinleri istemciye gider.
 
 **Gereksinimler:** PHP 8.0+ (PDO MySQL), MySQL 5.7+ / MariaDB 10.3+, Apache (`mod_headers` önerilir). Harici bağımlılık yoktur; jQuery, Bootstrap ve DataTables depoda gelir.
+
+### Ortam değişkenleri
+
+Depo kökündeki **`.env`** dosyasına yazın; `system/config.php` dosyasına
+hiç dokunmayın:
+
+```bash
+cp .env.example .env        # Windows: copy .env.example .env
+```
+
+`.env` `.gitignore` içindedir: depoya gönderilmez ve dağıtım (deploy) onu
+**silmez**. `system/config.php` ise depoda durur ve her dağıtımda depodaki
+sürümle değiştirilir — parolayı oraya yazarsanız hem GitHub'a gider hem de
+ilk deploy'da kaybolur.
+
+Dosyayı hiç oluşturmasanız da uygulama çalışır; aşağıdaki varsayılanlar
+yerel bir XAMPP kurulumuna göredir.
+
+**Değer arama sırası:** `.env` → sunucunun gerçek ortam değişkeni
+(Apache `SetEnv`, systemd…) → buradaki varsayılan.
+
+| Değişken | Varsayılan | Ne işe yarar |
+|---|---|---|
+| `DB_HOST` | `127.0.0.1` | Veritabanı sunucusu |
+| `DB_NAME` | `cy_bulk` | Veritabanı adı |
+| `DB_USER` | `root` | Kullanıcı |
+| `DB_PASS` | *(boş)* | Şifre — **koda yazmayın** |
+| `APP_TIMEZONE` | `Europe/Istanbul` | PHP'nin saat dilimi |
+| `APP_DEBUG` | *ortamdan* | Hataların ekrana basılıp basılmayacağı |
+
+**`APP_TIMEZONE` neden var?** XAMPP'ın `php.ini` dosyasındaki
+`date.timezone`, MySQL'in kullandığı sistem diliminden farklı olabilir.
+Test makinesinde PHP `Europe/Berlin`, MySQL `Europe/Istanbul`
+kullanıyordu; aynı anı anlatan iki satır bir saat farklı görünüyordu.
+Zaman **hesapları** SQL tarafında yapıldığı için doğruydu, ama ekrana
+basılan saat kayıyordu. Artık dilim açıkça sabitleniyor — sunucunuz başka
+bir bölgedeyse bu değişkeni tanımlamanız yeterli, koda dokunmayın.
+
 
 ---
 
